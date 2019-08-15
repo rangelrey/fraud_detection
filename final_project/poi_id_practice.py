@@ -104,6 +104,15 @@ df = df.drop("THE TRAVEL AGENCY IN THE PARK")
 
 #The same for bonus
 df['bonus'] = df['bonus'].astype(float)
+
+#We drop columns that have the same value
+to_drop = []
+for column in df.columns:
+    if len(pd.unique(df[column]))<2:
+        to_drop.append(column)
+
+df =df.drop(to_drop,axis=1)
+
 #Description of the metrics
 display(df.describe())
 #Box plot of salary
@@ -122,6 +131,7 @@ clean_enron= "clean_enron_df_csv"
 dirpath = os.getcwd()
 df.to_csv(dirpath+clean_enron,index_label="name")
 
+#we convert it back to dictionary
 my_dataset = df.to_dict(orient="index")
 
 ### Extract features and labels from dataset for local testing
@@ -155,14 +165,14 @@ from sklearn.model_selection import GridSearchCV
 features_train, features_test, labels_train, labels_test =     train_test_split(features, labels, test_size=0.3, random_state=42,stratify=labels)
 
 
-# In[4]:
+# In[21]:
 
 
 #First we will scale the data, then apply PCA to reduce dimensionality and then our classifier
 pipe = Pipeline([
         ('scale', StandardScaler()),
-        ('reduce_dims', PCA(n_components=4)),
-        ('clf', SVC(kernel = 'linear', C = 1))])
+        ('reduce_dims', PCA()),
+        ('clf', SVC(gamma='auto'))])
 
 param_grid = dict(reduce_dims__n_components=[4,6,8],
                   clf__C=np.logspace(-4, 1, 6),
@@ -170,10 +180,6 @@ param_grid = dict(reduce_dims__n_components=[4,6,8],
 
 
 grid = GridSearchCV(pipe,param_grid=param_grid,cv=3, n_jobs=1, verbose=2, scoring="accuracy")
-
-
-# In[15]:
-
 
 grid.fit(features_train, labels_train)
 
@@ -187,14 +193,11 @@ for param_name in sorted(param_grid.keys()):
 grid.best_estimator_.score(features_train, labels_train)
 
 
-# In[ ]:
+# In[18]:
 
 
-#lo de arriba te dará los parametros que debes usar. Looks good!
-
-
-# In[ ]:
-
+#we make the predictions with the best estimator obtained by Grid Search
+preds = grid.best_estimator_.predict(features_test)
 
 from sklearn.metrics import accuracy_score,recall_score,precision_score,f1_score
 print('Accuracy Score : ' + str(accuracy_score(labels_test,preds)))
@@ -210,43 +213,70 @@ print('Confusion Matrix : \n' + str(confusion_matrix(labels_test,preds)))
 # In[ ]:
 
 
-#el modelo que has usado no predice ningún POI
-#Preguntas:
-#Qué pasa si uso grid para tunear parámetros? fácil de hacerlo
-#Qué pasa si cambio de modelo?
-#Qué ocurriría si uso scaling & PCA en modelos donde no hace falta scaling ?
+#Doesn't look good, since the algorithm predicts all our values to be 0a
 
 
-# ## esto es PCA de udacity
+# In[28]:
+
+
+
+from sklearn.linear_model import LogisticRegression
+
+
+
+grid_values = {
+    "C":[ 65,75, 85], 
+    "penalty":["l1","l2"]
+
+}
+
+clf =LogisticRegression()
+grid = GridSearchCV(clf, grid_values, scoring='roc_auc', n_jobs=-1, verbose=10, cv=3)
+grid.fit(features_train, labels_train)
+
+
+print('Achieved score %f' % grid.best_score_, 'with params:', grid.best_params_)
+
+
+# In[30]:
+
+
+#we make the predictions with the best estimator obtained by Grid Search
+preds = grid.best_estimator_.predict(features_test)
+
+from sklearn.metrics import accuracy_score,recall_score,precision_score,f1_score
+print('Accuracy Score : ' + str(accuracy_score(labels_test,preds)))
+print('Precision Score : ' + str(precision_score(labels_test,preds)))
+print('Recall Score : ' + str(recall_score(labels_test,preds)))
+print('F1 Score : ' + str(f1_score(labels_test,preds)))
+
+#Dummy Classifier Confusion matrix
+from sklearn.metrics import confusion_matrix
+print('Confusion Matrix : \n' + str(confusion_matrix(labels_test,preds)))
+
+
+# In[34]:
+
+
+from tester import test_classifier, dump_classifier_and_data
+
+test_classifier(clf, my_dataset, features_list)
+
+
+# In[31]:
+
+
+dump_classifier_and_data(clf, my_dataset, features_list)
+
+
+# In[ ]:
+
+
+#no consigues que el dump funcione :/
+#ni tampoco el test. Mírate lo de StratifiedShuffleSplit
+
+
 # 
-# n_components = 400
-# 
-# print "Extracting the top %d eigenfaces from %d faces" % (n_components, X_train.shape[0])
-# t0 = time()
-# pca = RandomizedPCA(n_components=n_components, whiten=True).fit(X_train)
-# print "done in %0.3fs" % (time() - t0)
-# 
-# eigenfaces = pca.components_.reshape((n_components, h, w))
-# 
-# print "Projecting the input data on the eigenfaces orthonormal basis"
-# t0 = time()
-# X_train_pca = pca.transform(X_train)
-# X_test_pca = pca.transform(X_test)
-# #With the commands below we extract the variance for the first and second components
-# print "Variance explained by principal component"
-# print "Component 1", pca.explained_variance_ratio_[0]
-# print "Component 2", pca.explained_variance_ratio_[1]
-# print "done in %0.3fs" % (time() - t0)
-# 
-# parameteres = {'SVM__C':[0.001,0.1,10,100,10e5], 'SVM__gamma':[0.1,0.01]}
-# 
-# 
-# 
-# #estás intentando saber cómo usar pipe, mira el articulo de towardsdatascience que pone un ejemplo de como usar pipe
-# 
-# # Provided to give you a starting point. Try a variety of classifiers.
-# 
-# clf = 
 # 
 # ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
 # ### using our testing script. Check the tester.py script in the final project
@@ -263,4 +293,4 @@ print('Confusion Matrix : \n' + str(confusion_matrix(labels_test,preds)))
 # ### that the version of poi_id.py that you submit can be run on its own and
 # ### generates the necessary .pkl files for validating your results.
 # 
-# dump_classifier_and_data(clf, my_dataset, features_list)
+# 
