@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# The objetcive of this script is to crrate a fraud-detection prediction model, where the output is 1 if the model classifies it as "guilty of fraud" and 0 if it doesn't
+
 # In[1]:
 
 
@@ -13,16 +15,16 @@ import pickle
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from tester import test_classifier, dump_classifier_and_data
 sys.path.append("../tools/")
+
+from feature_format import featureFormat, targetFeatureSplit
+from tester import dump_classifier_and_data
 
 
 # In[2]:
 
 
-from feature_format import featureFormat, targetFeatureSplit
-from tester import dump_classifier_and_data
-
-### Task 1: Select what features you'll use.
 ### features_list is a list of strings, each of which is a feature name.
 ### The first feature must be "poi" since it is the label
 features_list = ['poi','salary', 'bonus',"to_messages","deferral_payments", "total_payments","loan_advances","restricted_stock_deferred","deferred_income","total_stock_value","from_poi_to_this_person","exercised_stock_options","from_messages","from_this_person_to_poi","long_term_incentive","shared_receipt_with_poi","restricted_stock","director_fees"] # You will need to use more features
@@ -36,13 +38,8 @@ with open("final_project_dataset.pkl", "rb") as data_file:
 ### Store to my_dataset for easy export below.
 my_dataset = data_dict
 
-
-# In[3]:
-
-
 #Let's create a DataFrame to visualize data
 df = pd.DataFrame.from_dict(my_dataset, orient='index', dtype=None)
-
 
 
 #We transfom NaN to Null values (since NaN is a string)
@@ -93,7 +90,6 @@ df.loc[('BHATNAGAR SANJAY','director_fees')] = 0
 #Does that solve our problems ?
 print(df[df[payment_categories[:-1]].sum(axis='columns') != df['total_payments']][payment_categories])
 print(df[df[stock_value_categories[:-1]].sum(axis='columns') != df['total_stock_value']][stock_value_categories])
-
 
 #Convert salary to float
 df['salary'] = df['salary'].astype(float)
@@ -161,11 +157,12 @@ from sklearn import decomposition
 
 from sklearn.model_selection import GridSearchCV
 
-#Let's separate the data in test and 
+#Let's separate the data in test. The train_test_split function splits arrays or matrices into random
+#train and test subsets
 features_train, features_test, labels_train, labels_test =     train_test_split(features, labels, test_size=0.3, random_state=42,stratify=labels)
 
 
-# In[21]:
+# In[3]:
 
 
 #First we will scale the data, then apply PCA to reduce dimensionality and then our classifier
@@ -173,7 +170,7 @@ pipe = Pipeline([
         ('scale', StandardScaler()),
         ('reduce_dims', PCA()),
         ('clf', SVC(gamma='auto'))])
-
+clf=SVC(gamma='auto')
 param_grid = dict(reduce_dims__n_components=[4,6,8],
                   clf__C=np.logspace(-4, 1, 6),
                   clf__kernel=['rbf','linear'])
@@ -193,7 +190,7 @@ for param_name in sorted(param_grid.keys()):
 grid.best_estimator_.score(features_train, labels_train)
 
 
-# In[18]:
+# In[4]:
 
 
 #we make the predictions with the best estimator obtained by Grid Search
@@ -216,18 +213,14 @@ print('Confusion Matrix : \n' + str(confusion_matrix(labels_test,preds)))
 #Doesn't look good, since the algorithm predicts all our values to be 0a
 
 
-# In[28]:
-
+# In[ ]:
 
 
 from sklearn.linear_model import LogisticRegression
 
-
-
 grid_values = {
     "C":[ 65,75, 85], 
     "penalty":["l1","l2"]
-
 }
 
 clf =LogisticRegression()
@@ -238,7 +231,7 @@ grid.fit(features_train, labels_train)
 print('Achieved score %f' % grid.best_score_, 'with params:', grid.best_params_)
 
 
-# In[30]:
+# In[ ]:
 
 
 #we make the predictions with the best estimator obtained by Grid Search
@@ -255,42 +248,20 @@ from sklearn.metrics import confusion_matrix
 print('Confusion Matrix : \n' + str(confusion_matrix(labels_test,preds)))
 
 
-# In[34]:
+# In[ ]:
 
 
-from tester import test_classifier, dump_classifier_and_data
 
-test_classifier(clf, my_dataset, features_list)
-
-
-# In[31]:
-
-
-dump_classifier_and_data(clf, my_dataset, features_list)
 
 
 # In[ ]:
 
 
-#no consigues que el dump funcione :/
-#ni tampoco el test. Mírate lo de StratifiedShuffleSplit
+test_classifier(clf, my_dataset, features_list)
 
 
-# 
-# 
-# ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
-# ### using our testing script. Check the tester.py script in the final project
-# ### folder for details on the evaluation method, especially the test_classifier
-# ### function. Because of the small size of the dataset, the script uses
-# ### stratified shuffle split cross validation. For more info: 
-# ### http://scikit-learn.org/stable/modules/generated/sklearn.cross_validation.StratifiedShuffleSplit.html
-# 
-# 
-# 
-# 
-# ### Task 6: Dump your classifier, dataset, and features_list so anyone can
-# ### check your results. You do not need to change anything below, but make sure
-# ### that the version of poi_id.py that you submit can be run on its own and
-# ### generates the necessary .pkl files for validating your results.
-# 
-# 
+# In[ ]:
+
+
+#dump_classifier_and_data(clf, my_dataset, features_list)
+
