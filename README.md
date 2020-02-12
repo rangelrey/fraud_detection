@@ -1,4 +1,5 @@
 # Fraud Detection
 
-Objective: to predict wether a subject can be guilty or fraud or not.
+Learning project from the course "Introduction to Machine learning" by Udacity:
+The objective of this project is to predict wether a subject can be classified guilty or fraud or not.
 Data: Enron dataset
